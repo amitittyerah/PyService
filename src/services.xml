@@ -1,0 +1,53 @@
+<services>
+	<group name="Example1" base="http://www.twitter.com/api">
+		<service name="login" url="/login">
+			<parameters>
+				<parameter>
+					<name>username</name>
+					<value>uname</value>
+				</parameter>
+				<parameter>
+					<name>password</name>
+					<value>pword</value>
+				</parameter>
+			</parameters>
+			<responses>
+				<response name="Token">
+					<name>token</name>
+				</response>
+			</responses>
+		</service>
+		<service name="tweets" url="/tweets/${Token}/${temp}$">
+			<parameters>
+				<parameter>
+					<name>timestamp</name>
+					<value></value>
+				</parameter>
+			</parameters>
+			<responses></responses>
+		</service>
+    </group>
+    <group name="Example2" base="http://www.twitter.com/api/v2">
+		<service name="login" url="/login">
+			<parameters>
+				<parameter>
+					<name>username</name>
+					<value>uname</value>
+				</parameter>
+				<parameter>
+					<name>password</name>
+					<value>pword</value>
+				</parameter>
+			</parameters>
+			<responses>
+				<response name="Token">
+					<name>access_token</name>
+				</response>
+			</responses>
+		</service>
+		<service name="tweets" url="/tweets/${Token}">
+			<parameters></parameters>
+			<responses></responses>
+		</service>
+    </group>
+</services>
