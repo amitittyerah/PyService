@@ -1,5 +1,5 @@
 '''
-    PyService
+	PyService
 '''
 
 import pycurl
@@ -11,7 +11,7 @@ import timeit
 from xml.dom import minidom
 
 '''
-    Config variables
+	Config variables
 '''
 
 debug = False
@@ -25,7 +25,7 @@ sort_json_keys = True
 json_indent = 6
 
 '''
-    Little utility class to handle color changes and text changes
+	Little utility class to handle color changes and text changes
 '''
 
 
@@ -40,7 +40,7 @@ class Format:
 
 
 '''
-    Little utility class to handle message output
+	Little utility class to handle message output
 '''
 
 
@@ -54,7 +54,7 @@ STARTING GROUP : %s\n\r------------------------------------\n\r" % (name)
 
     def print_pycurl_error(self, errorstr):
         print Format.red + "!!!------\n\rACKACK\n\r------\n\rError :\
-        \n\r%s\n\r------!!!!!" % (errorstr) + Format.close
+		\n\r%s\n\r------!!!!!" % (errorstr) + Format.close
 
     def print_curl_start(self, name, url):
         print Format.bold + Format.underline + Format.blue + str(name) + " called " + str(
@@ -86,7 +86,7 @@ STARTING GROUP : %s\n\r------------------------------------\n\r" % (name)
 
     def print_call_error(self, name):
         print Format.red + "!!!------\n\r\n\r------\n\rError :\
-        \n\r%s\n\r------!!!!!" % name + Format.close
+		\n\r%s\n\r------!!!!!" % name + Format.close
 
     def print_curl_params(self, str):
         post_list = str.split("&")
@@ -101,7 +101,7 @@ STARTING GROUP : %s\n\r------------------------------------\n\r" % (name)
 
 
 '''
-    Writer class to handle output buffer storage
+	Writer class to handle output buffer storage
 '''
 
 
@@ -125,13 +125,13 @@ class Writer:
 
 class ServiceCurl:
     '''
-        ----------------------------------------
-        Just a simple function for clean syntax
-        ----------------------------------------
-        Retrieves node value
-        @node - the node to search in
-        @str  - the index to search for
-    '''
+		----------------------------------------
+		Just a simple function for clean syntax
+		----------------------------------------
+		Retrieves node value
+		@node - the node to search in
+		@str  - the index to search for
+	'''
 
     def get_tag_child_data(self, node, str):
         try:
@@ -140,14 +140,14 @@ class ServiceCurl:
             return ""
 
     '''
-        ----------------------------------------
-        Store responses
-        ----------------------------------------
-        Store responses from services in a dictionary to be used
-        by other services. 
-        @json_response - The response to parse
-        @responses - the configuration from services.xml
-    '''
+		----------------------------------------
+		Store responses
+		----------------------------------------
+		Store responses from services in a dictionary to be used
+		by other services. 
+		@json_response - The response to parse
+		@responses - the configuration from services.xml
+	'''
 
     def store_responses(self, json_response, responses):
         for response in responses:
@@ -156,22 +156,22 @@ class ServiceCurl:
                                                   str(json_response[response['name']])})
 
     '''
-        ----------------------------------------
-        Clean Possible Variable (DEPRECATED)
-        ----------------------------------------
-        If a variable is actually a stand-in for a storage response, get the key.
-    '''
+		----------------------------------------
+		Clean Possible Variable (DEPRECATED)
+		----------------------------------------
+		If a variable is actually a stand-in for a storage response, get the key.
+	'''
 
     def clean_possible_variable(self, var):
         var = var.replace("${", "").replace("}$", "")
         return var
 
     '''
-        ----------------------------------------
-        Replace post string from response storage
-        ----------------------------------------
-        Replace stand-ins with values from the response storage
-    '''
+		----------------------------------------
+		Replace post string from response storage
+		----------------------------------------
+		Replace stand-ins with values from the response storage
+	'''
 
     def replace_post_string_from_response_storage(self, post_string):
         for key, value in self.response_storage.iteritems():
@@ -181,14 +181,14 @@ class ServiceCurl:
 
 
     '''
-        ----------------------------------------
-        cURL the URL
-        ----------------------------------------
-        Outputs value
-        @name - name of the service to test
-        @url  - the url to call
-        @post_string - the post parameters
-    '''
+		----------------------------------------
+		cURL the URL
+		----------------------------------------
+		Outputs value
+		@name - name of the service to test
+		@url  - the url to call
+		@post_string - the post parameters
+	'''
 
     def start_curl_and_show_result(self, args):
         w = Writer()
@@ -232,11 +232,11 @@ class ServiceCurl:
 
 
     '''
-        ----------------------------------------
-        Call the services
-        ----------------------------------------
-        @service_dict - dictionary of services to call
-    '''
+		----------------------------------------
+		Call the services
+		----------------------------------------
+		@service_dict - dictionary of services to call
+	'''
 
     def call_services(self, service_dict):
         called = 0
@@ -251,33 +251,41 @@ class ServiceCurl:
         return called
 
     '''
-        ----------------------------------------
-        Replace URL String with Arguments Passed
-        ----------------------------------------
-        Used to replace ${}$ variables from the URL with argument values
-    '''
+		----------------------------------------
+		Replace URL String with Arguments Passed
+		----------------------------------------
+		Used to replace ${}$ variables from the URL with argument values
+	'''
 
     def replace_url_string_with_args(self, url, temp):
         return url.replace("${temp}$", temp)
 
 
     '''
-        ----------------------------------------
-        INIT
-        ----------------------------------------
-        @group_specific - the specific group to test
-    '''
+		----------------------------------------
+		INIT
+		----------------------------------------
+		@group_specific - the specific group to test
+	'''
 
     def __init__(self, user_args):
         time_started = timeit.default_timer()
         services_count = 0
         services_failed = 0
         service_dict = []
+        user_params = {}
         self.response_storage = {}
         self.service_statuses = {}
         self.m = Messages()
         # parse the xml
         xmldoc = minidom.parse('services.xml')
+
+        # User specific values
+        if 'spec' in user_args and user_args['spec']:
+            for user_param in user_args['spec']:
+                kv_pair = user_param.split("=")
+                if len(kv_pair) == 2:
+                    user_params.update({kv_pair[0] : kv_pair[1]})
 
         # for each service outlined there, grab the required values
         for group in xmldoc.getElementsByTagName('group'):
@@ -317,7 +325,10 @@ class ServiceCurl:
                             p_name = self.get_tag_child_data(parameter, 'name')
                             p_value = self.get_tag_child_data(parameter, 'value')
                             if len(p_value) > 0 and len(p_name) > 0:
-                                post_string += "%s=%s&" % (str(p_name), str(p_value))
+                                post_string += "%s=%s&" % (str(p_name), \
+                                                           str(p_value) \
+                                                               if p_name not in user_params \
+                                                               else str(user_params.get(p_name)))
                             else:
                                 self.m.print_call_error(name)
                                 break
@@ -355,8 +366,9 @@ def check_args(args):
     group = False
     service_to_call = False
     temp = False
+    user_specific_values = False
     try:
-        opts, args = getopt.getopt(args, "g:s:t:")
+        opts, args = getopt.getopt(args, "g:s:t:o:")
     except getopt.GetoptError, error:
         print "Empty service name"
         sys.exit()
@@ -368,7 +380,9 @@ def check_args(args):
             service_to_call = str(arg).split(",")
         elif opt == "-t": # replace the temporary variable
             temp = str(arg)
-    return {"group": group, "service": service_to_call, "temp": temp}
+        elif opt == "-o": # ovveride responses
+            user_specific_values = str(arg).split(",")
+    return {"group": group, "service": service_to_call, "temp": temp, "spec" : user_specific_values}
 
 
 if __name__ == "__main__":
