@@ -3,11 +3,16 @@ PyService
 
 Mass JSON API tester
 
+### Features
+
+Target specific services in groups 
+Override values for single service testing
+
 
 ### Usage
 
 ```python
-$ python service.py -g <group_name> -s <service_name> -t <temporary_variable>
+$ python service.py -g <group_name> -s <service_name> -t <temporary_variable> -o <key>=<value>,<key>=<value>
 ```
 
 Example -
