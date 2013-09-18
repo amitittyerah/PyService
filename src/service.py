@@ -193,9 +193,12 @@ class ServiceCurl:
     def start_curl_and_show_result(self, args):
         w = Writer()
         post_string = self.replace_post_string_from_response_storage(args['post_string'])
+        url = "%s%s" % (str(args['url']), "" \
+            if str(args['request_type']) == "POST" else "?%s" % post_string)
         curl_inst = pycurl.Curl() # start instance
-        curl_inst.setopt(curl_inst.URL, str(args['url'])) # setup url to call
-        curl_inst.setopt(curl_inst.POSTFIELDS, str(post_string)) # set the post fields
+        curl_inst.setopt(curl_inst.URL, url) # setup url to call
+        if str(args['request_type']) == "POST":
+            curl_inst.setopt(curl_inst.POSTFIELDS, str(post_string)) # set the post fields
         curl_inst.setopt(curl_inst.SSL_VERIFYPEER, 0)
         curl_inst.setopt(curl_inst.SSL_VERIFYHOST, 0)
         curl_inst.setopt(curl_inst.CONNECTTIMEOUT, connection_timeout) # set connection timeout
@@ -212,7 +215,7 @@ class ServiceCurl:
             curl_inst.setopt(curl_inst.SSLKEY, args['ssl_key'])
             
         
-        self.m.print_curl_start(args['name'], args['url'])
+        self.m.print_curl_start(args['name'], url)
         self.service_statuses.update({args['url']: Format.green + "Success" + Format.close})
         if show_post_params:
             self.m.print_curl_params(post_string)
@@ -320,6 +323,10 @@ class ServiceCurl:
                                                             str(name).lower() in user_args['service']):
                         services_count += 1
                         url = base_url + str(service.getAttributeNode('url').nodeValue)
+                        request_type = str(service.getAttributeNode('request')) \
+                            if (service.getAttributeNode('request')) else 'POST' \
+                            if not user_args['request_type'] else user_args['request_type']
+
                         # for each parameter in parameters, grab and create the post string
                         for parameter in service.getElementsByTagName('parameter'):
                             p_name = self.get_tag_child_data(parameter, 'name')
@@ -342,6 +349,7 @@ class ServiceCurl:
                             service_dict.append({"name": name, "url": url, 
                                                  "post_string": post_string, 
                                                  "responses": responses,
+                                                 "request_type" : request_type,
                                                  "ssl_ca" : ssl_ca,
                                                  "ssl_cert" : ssl_cert,
                                                  "ssl_key" : ssl_key
@@ -362,13 +370,15 @@ class ServiceCurl:
         self.m.print_services_status(self.service_statuses)
 
 
+
 def check_args(args):
     group = False
     service_to_call = False
     temp = False
     user_specific_values = False
+    request_type = "POST"
     try:
-        opts, args = getopt.getopt(args, "g:s:t:o:")
+        opts, args = getopt.getopt(args, "g:s:t:o:r:")
     except getopt.GetoptError, error:
         print "Empty service name"
         sys.exit()
@@ -382,7 +392,15 @@ def check_args(args):
             temp = str(arg)
         elif opt == "-o": # ovveride responses
             user_specific_values = str(arg).split(",")
-    return {"group": group, "service": service_to_call, "temp": temp, "spec" : user_specific_values}
+        elif opt == "-r": # request type
+            request_type = str(arg)
+
+    return {"group": group,
+            "service": service_to_call,
+            "temp": temp,
+            "spec" : user_specific_values ,
+            "request_type" : request_type
+            }
 
 
 if __name__ == "__main__":

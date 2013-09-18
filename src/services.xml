@@ -17,7 +17,7 @@
 				</response>
 			</responses>
 		</service>
-		<service name="tweets" url="/tweets/${Token}/${temp}$">
+		<service name="tweets" url="/tweets/${Token}/${temp}$" request="GET">
 			<parameters>
 				<parameter>
 					<name>timestamp</name>
