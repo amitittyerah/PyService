@@ -24,6 +24,9 @@ charset = 'UTF-8'
 sort_json_keys = True
 json_indent = 6
 
+
+SERVICES_XML = 'services.xml'
+
 '''
 	Little utility class to handle color changes and text changes
 '''
@@ -281,7 +284,7 @@ class ServiceCurl:
         self.service_statuses = {}
         self.m = Messages()
         # parse the xml
-        xmldoc = minidom.parse('services.xml')
+        xmldoc = minidom.parse(SERVICES_XML)
 
         # User specific values
         if 'spec' in user_args and user_args['spec']:
@@ -331,7 +334,7 @@ class ServiceCurl:
                         for parameter in service.getElementsByTagName('parameter'):
                             p_name = self.get_tag_child_data(parameter, 'name')
                             p_value = self.get_tag_child_data(parameter, 'value')
-                            if len(p_value) > 0 and len(p_name) > 0:
+                            if len(p_name) > 0:
                                 post_string += "%s=%s&" % (str(p_name), \
                                                            str(p_value) \
                                                                if p_name not in user_params \
@@ -358,18 +361,20 @@ class ServiceCurl:
             else:
                 self.m.print_aborted_group(group_name)
 
-        services_successfully_called = self.call_services(service_dict)
-        time_ended = timeit.default_timer()
+        if not user_args['list_all']:
+            services_successfully_called = self.call_services(service_dict)
+            time_ended = timeit.default_timer()
 
-        # Outputs
-        self.m.print_process_exec_time(str(time_ended - time_started))
-        self.m.print_services_count(services_count)
-        self.m.print_services_called(services_successfully_called)
-        if services_count > 0:
-            self.m.print_services_percent(float(services_successfully_called * 100 / services_count))
-        self.m.print_services_status(self.service_statuses)
-
-
+            # Outputs
+            self.m.print_process_exec_time(str(time_ended - time_started))
+            self.m.print_services_count(services_count)
+            self.m.print_services_called(services_successfully_called)
+            if services_count > 0:
+                self.m.print_services_percent(float(services_successfully_called * 100 / services_count))
+            self.m.print_services_status(self.service_statuses)
+        else :
+            for service in service_dict:
+                print "%s \n\r %s\n\r\n\r" % (service['name'],service['url'])
 
 def check_args(args):
     group = False
@@ -377,8 +382,9 @@ def check_args(args):
     temp = False
     user_specific_values = False
     request_type = "POST"
+    list_all = False
     try:
-        opts, args = getopt.getopt(args, "g:s:t:o:r:")
+        opts, args = getopt.getopt(args, "g:s:t:o:r:l:")
     except getopt.GetoptError, error:
         print "Empty service name"
         sys.exit()
@@ -394,12 +400,16 @@ def check_args(args):
             user_specific_values = str(arg).split(",")
         elif opt == "-r": # request type
             request_type = str(arg)
+        elif opt == "-l": # list all services
+            list_all = True
+
 
     return {"group": group,
             "service": service_to_call,
             "temp": temp,
             "spec" : user_specific_values ,
-            "request_type" : request_type
+            "request_type" : request_type,
+            "list_all" : list_all
             }
 
 
