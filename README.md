@@ -7,7 +7,7 @@ Mass JSON API tester
 ### Usage
 
 ```python
-$ python service.py -g <group_name> -s <service_name> -t <temporary_variable> -o <key>=<value>,<key>=<value> -r GET|POST
+$ python service.py -g <group_name> -s <service_name> -t <temporary_variable> -o <key>=<value>,<key>=<value> -r GET|POST (optional) -l yes
 ```
 
 Example -
