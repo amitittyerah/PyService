@@ -1,7 +1,8 @@
 '''
 	PyService
 '''
-
+import os
+import shutil
 import pycurl
 import sys
 import getopt
@@ -124,6 +125,87 @@ class Writer:
     def read_as_json(self):
         json_stream = self.read_as_dict()
         return json.dumps(json_stream, sort_keys=sort_json_keys, indent=json_indent)
+
+class HTMLInputObject():
+    def __init__(self,name,value,type):
+        self.name = name
+        self.value = value
+        self.type = type
+    def _get(self):
+        return '<tr><td><label>%s</label></td><td>%s</td></tr>' % \
+               (self.name,('<input type="text" name="%s" value="%s" size="50" >' if self.type == "text" else '<textarea rows="10" cols="80" name="%s">%s</textarea>') % (self.name,self.value))
+
+class HTMLBuilder:
+    def __init__(self,group_name,name):
+        self.group_name = group_name
+        self.name = name
+        self.master = "%s/%s.html" % (self.group_name,'apimaster')
+        self.html = '<!DOCTYPE>\
+        <html>\
+            <head>\
+                <title>API Test Page - %s</title>\
+            </head>\
+            <body>\
+                <a href="apimaster.html">Back to master</a><br/><br/>\
+                <table>\
+                <form id="send" action="${{API_URL}}$" method="${{API_REQUEST_METHOD}}$" target="_new">\
+                    ${{API_BODY}}$\
+                    <tr><td colspan="2" align="right"><input type="submit" value="Send"></td></tr>\
+                </form>\
+                </table>\
+            </body>\
+        </html>' % name
+        self.api_body = ''
+
+    def add_request(self,url,request_type):
+        self.html = self.html\
+            .replace('${{API_URL}}$',url)\
+            .replace('${{API_REQUEST_METHOD}}$',request_type)
+
+    def add_item(self,name,value,type):
+        obj = HTMLInputObject(name,value,type)
+        self.api_body += obj._get()
+
+    def _make_folder(self):
+        if os.path.exists(self.group_name):
+            shutil.rmtree(self.group_name)
+        os.makedirs(self.group_name)
+
+    def _file_handle(self,fname,fcontent,handle):
+        f = open('%s' % (fname),'%s' % handle)
+        f.write(fcontent)
+        f.close()
+
+    def _create_file(self,fname,fcontent):
+        self._file_handle(fname,fcontent,'w+')
+
+    def _update_file(self,fname,fcontent):
+        if os.path.exists(fname):
+            self._file_handle(fname,fcontent,'a+')
+        else:
+            self._create_file(fname,fcontent)
+
+    def _create_master_if_not_exists(self):
+
+        if not os.path.exists(self.master):
+            self._create_file(self.master,"")
+
+    def _clean(self):
+        shutil.rmtree('%s' % self.group_name)
+
+    def build(self):
+        self.html = self.html.replace('${{API_BODY}}$',self.api_body)
+        return self.html
+
+    def build_and_write(self):
+        self.build()
+        self._make_folder()
+        self._create_file("%s/%s.html" % (self.group_name,self.name),self.html)
+        self._create_master_if_not_exists()
+
+    def update_master(self):
+        self._update_file(self.master,"<a href='%s.html'>%s</a><br/>" % (self.name,self.name))
+
 
 
 class ServiceCurl:
@@ -283,6 +365,8 @@ class ServiceCurl:
         self.response_storage = {}
         self.service_statuses = {}
         self.m = Messages()
+
+
         # parse the xml
         xmldoc = minidom.parse(SERVICES_XML)
 
@@ -318,9 +402,11 @@ class ServiceCurl:
                                                   str(group_name).lower() in user_args['group']):
             
                 for service in group.getElementsByTagName('service'):
+
                     post_string = ""
                     responses = []
                     name = str(service.getAttributeNode('name').nodeValue)
+                    html_builder = HTMLBuilder(group_name,name)
                     # if service specified, check if service in choice
                     if not user_args['service'] or (user_args['service'] and \
                                                             str(name).lower() in user_args['service']):
@@ -329,16 +415,19 @@ class ServiceCurl:
                         request_type = str(service.getAttributeNode('request')) \
                             if (service.getAttributeNode('request')) else 'POST' \
                             if not user_args['request_type'] else user_args['request_type']
-
+                        html_builder.add_request(url,request_type)
                         # for each parameter in parameters, grab and create the post string
                         for parameter in service.getElementsByTagName('parameter'):
                             p_name = self.get_tag_child_data(parameter, 'name')
                             p_value = self.get_tag_child_data(parameter, 'value')
+                            p_type = "text" if not parameter.getAttributeNode('type') else str(parameter.getAttributeNode('type').nodeValue)
+
                             if len(p_name) > 0:
-                                post_string += "%s=%s&" % (str(p_name), \
-                                                           str(p_value) \
+                                p_value = str(p_value) \
                                                                if p_name not in user_params \
-                                                               else str(user_params.get(p_name)))
+                                                               else str(user_params.get(p_name))
+                                post_string += "%s=%s&" % (str(p_name),str(p_value))
+                                html_builder.add_item(p_name,p_value,p_type)
                             else:
                                 self.m.print_call_error(name)
                                 break
@@ -349,7 +438,9 @@ class ServiceCurl:
                         if len(name) > 0 and len(url) > 0:
                             if user_args['temp']:
                                 url = self.replace_url_string_with_args(url, user_args['temp'])
-                            service_dict.append({"name": name, "url": url, 
+                            html_builder.build_and_write()
+                            html_builder.update_master()
+                            service_dict.append({"name": name, "url": url,
                                                  "post_string": post_string, 
                                                  "responses": responses,
                                                  "request_type" : request_type,
